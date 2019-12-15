@@ -1,26 +1,62 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import useSWR, { SWRConfig } from "swr";
 
-function App() {
+const fetcher = (...args) => fetch(...args).then(res => res.json());
+
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <SWRConfig value={{ revalidateOnFocus: false, fetcher }}>
+      <Crimes />
+    </SWRConfig>
   );
 }
 
-export default App;
+function Crimes() {
+  const url =
+    "https://data.police.uk/api/crimes-street/all-crime?lat=52.629729&lng=-1.131592&date=2019-10";
+  const { data, error } = useSWR(url);
+
+  if (error) return <div>Error...</div>;
+  if (!data) return <div>Loading...</div>;
+
+  return (
+    <DisplayCrimes
+      crimes={data}
+      categories={[...new Set(data.map(crime => crime.category))]}
+    />
+  );
+}
+
+function DisplayCrimes({ crimes, categories }) {
+  const [filterCategory, setFilterCategory] = React.useState(null);
+
+  const filteredCrimes = filterCategory
+    ? crimes.filter(crime => crime.category === filterCategory)
+    : crimes;
+
+  return (
+    <>
+      {categories.map(category => (
+        <button
+          onClick={() => {
+            setFilterCategory(category);
+          }}
+          key={category}
+        >
+          {category}
+        </button>
+      ))}
+      {filterCategory && (
+        <button
+          onClick={() => {
+            setFilterCategory(null);
+          }}
+        >
+          reset
+        </button>
+      )}
+
+      <pre>{JSON.stringify(filteredCrimes, null, 2)}</pre>
+    </>
+  );
+}
